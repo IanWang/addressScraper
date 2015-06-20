@@ -26,13 +26,11 @@ for(var w = 1; w <= workers; w++) {
     
     setTimeout(function() {
 
-          /*
       console.log('worker : ', worker);
       console.log('startId: ', startId);
       console.log('endId  : ', endId);
-      */
 
-      for(var id = startId; id < endId; id++) {
+      for(var id = startId; id < endId + 1 ; id++) {
         (function(i) {
 
           var url = BASE + i + END;
