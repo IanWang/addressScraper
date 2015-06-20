@@ -26,9 +26,11 @@ for(var w = 1; w <= workers; w++) {
     
     setTimeout(function() {
 
+      /*
       console.log('worker : ', worker);
       console.log('startId: ', startId);
       console.log('endId  : ', endId);
+      */
 
       for(var id = startId; id < endId + 1 ; id++) {
         (function(i) {
@@ -36,16 +38,14 @@ for(var w = 1; w <= workers; w++) {
           var url = BASE + i + END;
           
           request.get(url).end(function(err, res) {
-            // end of all requests
-            if(!--totalRequest) {
-              writeJSON(collection);
-            }
             if(err) {
               console.log('(' + i + ') _Fail_');
               return;
             }
+
             var $ = cheerio.load(res.text);
             getDistrictDetails($, i);
+
           });
 
           startId++;
@@ -53,7 +53,7 @@ for(var w = 1; w <= workers; w++) {
         })(id);
       }
 
-    }, 50);
+    }, 75);
   })(w);
 }
 
@@ -81,6 +81,11 @@ function getDistrictDetails($, index) {
 
     collection[county][districtName] = districtInfo;
     console.log('(' + index + ') _add__ ', districtName);
+
+    // end of all requests
+    if(!--totalRequest) {
+      writeJSON(collection);
+    }
 
   });
 }
