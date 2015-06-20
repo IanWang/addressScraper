@@ -8,55 +8,83 @@ var cheerio = require('cheerio');
 var BASE = 'http://www.319papago.idv.tw/lifeinfo/localgov/localgov-';
 var FIRST_ID = 100;
 var LAST_ID = 999;
-var requestCount = LAST_ID - FIRST_ID;
 var END = '.html';
 
+var workers = 10;
+var totalRequest = LAST_ID - FIRST_ID;
+var requestChunk = Math.round(totalRequest / workers);
+
 var collection = {};
+var startId = FIRST_ID;
 
-for(var id = FIRST_ID; id < LAST_ID; id++) {
 
-  (function(i) {
-  var url = BASE + i + END;
-  request
-    .get(url)
-    .end(function(err, res) {
-      
-      if(!--requestCount) {
-        writeJSON(collection);
+for(var w = 1; w <= workers; w++) {
+
+  (function(worker) {
+    
+    var endId = startId + worker * requestChunk;
+    
+    setTimeout(function() {
+
+          /*
+      console.log('worker : ', worker);
+      console.log('startId: ', startId);
+      console.log('endId  : ', endId);
+      */
+
+      for(var id = startId; id < endId; id++) {
+        (function(i) {
+
+          var url = BASE + i + END;
+          
+          request.get(url).end(function(err, res) {
+            // end of all requests
+            if(!--totalRequest) {
+              writeJSON(collection);
+            }
+            if(err) {
+              console.log('(' + i + ') _Fail_');
+              return;
+            }
+            var $ = cheerio.load(res.text);
+            getDistrictDetails($, i);
+          });
+
+          startId++;
+
+        })(id);
       }
-      if(err) {
-        console.log('(' + i + ') _Fail_ NOT EXIST');
-        return;
-      }
 
-      var $ = cheerio.load(res.text);
+    }, 50);
+  })(w);
+}
 
-      var county = $('table table h2').text().slice(0,3);
-      var dataTable = $('table table table')[2];
 
-      // init the collection, prevent to overwrite it.
-      if(typeof collection[county] === 'undefined') {
-        collection[county] = {};
-      };
+function getDistrictDetails($, index) {
 
-      $(dataTable).filter(function(){ 
+  var county = $('table table h2').text().slice(0,3);
+  var dataTable = $('table table table')[2];
 
-        // get the second tr's td
-        var data = $(this).children().eq(1).children();
-        
-        var districtName = data.eq(0).text();
-        var districtInfo = {
-          phone: data.eq(1).text(),
-          address: data.eq(3).text()
-        };
+  // init the collection, prevent to overwrite it.
+  if(typeof collection[county] === 'undefined') {
+    collection[county] = {};
+  };
 
-        collection[county][districtName] = districtInfo;
-        console.log('(' + i + ') _add__ ', districtName);
+  $(dataTable).filter(function(){ 
 
-      });
+    // get the second tr's td
+    var data = $(this).children().eq(1).children();
+    
+    var districtName = data.eq(0).text();
+    var districtInfo = {
+      phone: data.eq(1).text(),
+      address: data.eq(3).text()
+    };
 
-    });
-  })(id);
+    collection[county][districtName] = districtInfo;
+    console.log('(' + index + ') _add__ ', districtName);
+
+  });
 }
 
 function writeJSON(json) {
