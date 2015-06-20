@@ -26,18 +26,21 @@ for(var w = 1; w <= workers; w++) {
     
     setTimeout(function() {
 
-      /*
-      console.log('worker : ', worker);
-      console.log('startId: ', startId);
-      console.log('endId  : ', endId);
-      */
-
       for(var id = startId; id < endId + 1 ; id++) {
         (function(i) {
 
           var url = BASE + i + END;
+          var queue = LAST_ID;
           
           request.get(url).end(function(err, res) {
+
+            // end of all requests, wait for the last res.
+            if(!--totalRequest) {
+              setTimeout(function() {
+                writeJSON(collection);
+              }, 300);
+            }
+
             if(err) {
               console.log('(' + i + ') _Fail_');
               return;
@@ -82,11 +85,6 @@ function getDistrictDetails($, index) {
     collection[county][districtName] = districtInfo;
     console.log('(' + index + ') _add__ ', districtName);
 
-    // end of all requests
-    if(!--totalRequest) {
-      writeJSON(collection);
-    }
-
   });
 }
 
@@ -96,4 +94,3 @@ function writeJSON(json) {
     console.log('DONE!')
   })
 }
-
